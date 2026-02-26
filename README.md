@@ -1,6 +1,6 @@
 # kubernetes-mcp
 
-A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude (or any MCP client) full access to a Kubernetes cluster and Helm. Exposes **68 tools** covering pods, deployments, services, config, secrets, events, logs, exec, port-forwarding, manifest apply/delete, Helm lifecycle management, nodes, workloads, storage, ingress, batch jobs, rollouts, RBAC, kubeconfig contexts, metrics, HPAs, and CRDs.
+A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude (or any MCP client) full access to a Kubernetes cluster and Helm. Exposes **73 tools** covering pods, deployments, services, config, secrets, events, logs, exec, port-forwarding, manifest apply/delete, Helm lifecycle management, nodes, workloads, storage, ingress, batch jobs, rollouts, RBAC, kubeconfig contexts, metrics, HPAs, and CRDs.
 
 ## Prerequisites
 
@@ -75,6 +75,7 @@ To register the server globally (outside this directory) add the following to yo
 | `k8s_port_forward_stop` | Stop a port-forward session |
 | `k8s_apply_manifest` | Apply a YAML/JSON manifest (`kubectl apply -f -`) |
 | `k8s_delete_manifest` | Delete resources defined in a manifest |
+| `k8s_delete_resource` | Delete any resource by type, name, and namespace (no manifest needed) |
 
 ### Kubernetes — nodes
 
@@ -103,6 +104,8 @@ To register the server globally (outside this directory) add the following to yo
 | `k8s_get_job` | Get full details of a Job |
 | `k8s_list_cronjobs` | List CronJobs in a namespace |
 | `k8s_get_cronjob` | Get full details of a CronJob |
+| `k8s_suspend_cronjob` | Suspend a CronJob to stop it scheduling new Jobs |
+| `k8s_resume_cronjob` | Resume a suspended CronJob |
 
 ### Kubernetes — rollouts
 
@@ -110,6 +113,7 @@ To register the server globally (outside this directory) add the following to yo
 |---|---|
 | `k8s_rollout_restart` | Trigger a rolling restart of a Deployment, DaemonSet, or StatefulSet |
 | `k8s_rollout_status` | Check rollout status and wait for completion |
+| `k8s_rollout_undo` | Roll back to a previous revision |
 
 ### Kubernetes — storage
 
@@ -120,6 +124,7 @@ To register the server globally (outside this directory) add the following to yo
 | `k8s_list_persistent_volume_claims` | List PersistentVolumeClaims in a namespace |
 | `k8s_get_persistent_volume_claim` | Get full details of a PersistentVolumeClaim |
 | `k8s_list_storage_classes` | List all StorageClasses |
+| `k8s_get_storage_class` | Get full details of a StorageClass |
 
 ### Kubernetes — networking
 
@@ -185,7 +190,7 @@ To register the server globally (outside this directory) add the following to yo
 npm run build      # compile TypeScript → dist/index.js via esbuild
 npm run dev        # rebuild on file changes
 npm run typecheck  # tsc --noEmit (type-check only, no emit)
-npm test           # smoke test — exercises all 68 tools against a live cluster
+npm test           # smoke test — exercises all 73 tools against a live cluster
 ```
 
 ### Smoke test
@@ -200,17 +205,17 @@ Kubernetes MCP Server — Smoke Test
   [PASS] initialize — serverInfo.name === "kubernetes"
 
 ── Phase 2: Tool inventory ─────────────────────────────────
-  [PASS] tools/list — count === 68
+  [PASS] tools/list — count === 73
 
 ── Phase 3: Tool assertions ────────────────────────────────
   [PASS] k8s_list_namespaces — returns non-empty array
   [PASS] k8s_list_pods — non-empty array in kube-system
   ...
 ==================================================
-Results  (6.1s elapsed)
-  Passed : 54
+Results  (7.3s elapsed)
+  Passed : 55
   Failed : 0
-  Skipped: 6
+  Skipped: 10
 ```
 
 ### Build notes
