@@ -2,7 +2,7 @@
 /**
  * Kubernetes MCP Server — Smoke Test
  *
- * Tests 22 read-only tools against a real cluster by driving the MCP server
+ * Tests read-only tools against a real cluster by driving the MCP server
  * over stdio. No cluster mutations are performed.
  *
  * Usage:  npm test
