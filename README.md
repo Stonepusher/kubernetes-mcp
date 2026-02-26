@@ -1,6 +1,6 @@
 # kubernetes-mcp
 
-A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude (or any MCP client) full access to a Kubernetes cluster and Helm. Exposes **30 tools** covering pods, deployments, services, config, secrets, events, logs, exec, port-forwarding, manifest apply/delete, and Helm lifecycle management.
+A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude (or any MCP client) full access to a Kubernetes cluster and Helm. Exposes **68 tools** covering pods, deployments, services, config, secrets, events, logs, exec, port-forwarding, manifest apply/delete, Helm lifecycle management, nodes, workloads, storage, ingress, batch jobs, rollouts, RBAC, kubeconfig contexts, metrics, HPAs, and CRDs.
 
 ## Prerequisites
 
@@ -25,6 +25,8 @@ A `.mcp.json` is included in the repo root. When you open the project directory 
 > "Scale the echo-server deployment to 3 replicas"
 > "Show me the logs from the nginx pod"
 > "Install bitnami/nginx as my-release in the staging namespace"
+> "What CRDs are installed in this cluster?"
+> "Show me all ClusterRoles and their rule counts"
 
 ### Manual registration
 
@@ -74,6 +76,94 @@ To register the server globally (outside this directory) add the following to yo
 | `k8s_apply_manifest` | Apply a YAML/JSON manifest (`kubectl apply -f -`) |
 | `k8s_delete_manifest` | Delete resources defined in a manifest |
 
+### Kubernetes — nodes
+
+| Tool | Description |
+|---|---|
+| `k8s_list_nodes` | List all nodes with status, roles, and version info |
+| `k8s_get_node` | Get full details of a node |
+| `k8s_cordon_node` | Cordon a node to prevent new pod scheduling |
+| `k8s_uncordon_node` | Uncordon a node to re-enable pod scheduling |
+| `k8s_drain_node` | Drain a node by evicting all pods |
+
+### Kubernetes — workloads
+
+| Tool | Description |
+|---|---|
+| `k8s_list_daemonsets` | List DaemonSets in a namespace |
+| `k8s_get_daemonset` | Get full details of a DaemonSet |
+| `k8s_list_statefulsets` | List StatefulSets in a namespace |
+| `k8s_get_statefulset` | Get full details of a StatefulSet |
+
+### Kubernetes — batch
+
+| Tool | Description |
+|---|---|
+| `k8s_list_jobs` | List Jobs in a namespace |
+| `k8s_get_job` | Get full details of a Job |
+| `k8s_list_cronjobs` | List CronJobs in a namespace |
+| `k8s_get_cronjob` | Get full details of a CronJob |
+
+### Kubernetes — rollouts
+
+| Tool | Description |
+|---|---|
+| `k8s_rollout_restart` | Trigger a rolling restart of a Deployment, DaemonSet, or StatefulSet |
+| `k8s_rollout_status` | Check rollout status and wait for completion |
+
+### Kubernetes — storage
+
+| Tool | Description |
+|---|---|
+| `k8s_list_persistent_volumes` | List all PersistentVolumes |
+| `k8s_get_persistent_volume` | Get full details of a PersistentVolume |
+| `k8s_list_persistent_volume_claims` | List PersistentVolumeClaims in a namespace |
+| `k8s_get_persistent_volume_claim` | Get full details of a PersistentVolumeClaim |
+| `k8s_list_storage_classes` | List all StorageClasses |
+
+### Kubernetes — networking
+
+| Tool | Description |
+|---|---|
+| `k8s_list_ingresses` | List Ingresses in a namespace |
+| `k8s_get_ingress` | Get full details of an Ingress |
+
+### Kubernetes — autoscaling
+
+| Tool | Description |
+|---|---|
+| `k8s_list_hpas` | List HorizontalPodAutoscalers in a namespace |
+| `k8s_get_hpa` | Get full details of a HorizontalPodAutoscaler |
+
+### Kubernetes — RBAC
+
+| Tool | Description |
+|---|---|
+| `k8s_list_cluster_roles` | List all ClusterRoles |
+| `k8s_get_cluster_role` | Get full details of a ClusterRole |
+| `k8s_list_cluster_role_bindings` | List all ClusterRoleBindings |
+| `k8s_get_cluster_role_binding` | Get full details of a ClusterRoleBinding |
+| `k8s_list_roles` | List Roles in a namespace |
+| `k8s_get_role` | Get full details of a Role |
+| `k8s_list_role_bindings` | List RoleBindings in a namespace |
+| `k8s_get_role_binding` | Get full details of a RoleBinding |
+
+### Kubernetes — custom resources
+
+| Tool | Description |
+|---|---|
+| `k8s_list_crds` | List all CustomResourceDefinitions |
+| `k8s_get_crd` | Get full details of a CustomResourceDefinition |
+
+### Kubernetes — contexts & metrics
+
+| Tool | Description |
+|---|---|
+| `k8s_list_contexts` | List all kubeconfig contexts and show which is active |
+| `k8s_use_context` | Switch the active kubeconfig context |
+| `k8s_top_nodes` | Show CPU/memory usage for all nodes (requires metrics-server) |
+| `k8s_top_pods` | Show CPU/memory usage for pods in a namespace (requires metrics-server) |
+
 ### Helm
 
 | Tool | Description |
@@ -95,12 +185,12 @@ To register the server globally (outside this directory) add the following to yo
 npm run build      # compile TypeScript → dist/index.js via esbuild
 npm run dev        # rebuild on file changes
 npm run typecheck  # tsc --noEmit (type-check only, no emit)
-npm test           # smoke test — exercises all 30 tools against a live cluster
+npm test           # smoke test — exercises all 68 tools against a live cluster
 ```
 
 ### Smoke test
 
-`npm test` runs `test/smoke-test.mjs`, which spawns the MCP server over stdio and exercises all 22 read-only tools against the currently configured cluster. It discovers real resource names dynamically (no hardcoded names) and skips dependent tests gracefully when resources are not found.
+`npm test` runs `test/smoke-test.mjs`, which spawns the MCP server over stdio and exercises all read-only tools against the currently configured cluster. It discovers real resource names dynamically (no hardcoded names) and skips dependent tests gracefully when resources are not found. Write operations (`k8s_rollout_restart`, `k8s_use_context`, etc.) are hard-skipped.
 
 ```
 Kubernetes MCP Server — Smoke Test
@@ -110,17 +200,17 @@ Kubernetes MCP Server — Smoke Test
   [PASS] initialize — serverInfo.name === "kubernetes"
 
 ── Phase 2: Tool inventory ─────────────────────────────────
-  [PASS] tools/list — count === 30
+  [PASS] tools/list — count === 68
 
 ── Phase 3: Tool assertions ────────────────────────────────
   [PASS] k8s_list_namespaces — returns non-empty array
   [PASS] k8s_list_pods — non-empty array in kube-system
   ...
 ==================================================
-Results  (3.4s elapsed)
-  Passed : 23
+Results  (6.1s elapsed)
+  Passed : 54
   Failed : 0
-  Skipped: 1
+  Skipped: 6
 ```
 
 ### Build notes
