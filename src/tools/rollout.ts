@@ -75,4 +75,33 @@ export function registerRolloutTools(server: McpServer): void {
       }
     },
   );
+
+  // k8s_rollout_undo
+  server.tool(
+    'k8s_rollout_undo',
+    'Roll back a Deployment, DaemonSet, or StatefulSet to a previous revision',
+    {
+      name: z.string().describe('Resource name'),
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+      resourceType: resourceTypeEnum,
+      toRevision: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Revision number to roll back to (omit or 0 for the previous revision)'),
+    },
+    async ({ name, namespace, resourceType, toRevision }) => {
+      try {
+        const args = ['rollout', 'undo', `${resourceType}/${name}`, '-n', namespace];
+        if (toRevision !== undefined) args.push(`--to-revision=${toRevision}`);
+        const result = await runCommand('kubectl', args);
+        const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+        return { content: [{ type: 'text', text: output || `${resourceType}/${name} rolled back.` }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: 'text', text: message }], isError: true };
+      }
+    },
+  );
 }

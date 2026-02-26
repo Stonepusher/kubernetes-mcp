@@ -122,4 +122,22 @@ export function registerStorageTools(server: McpServer): void {
       }
     },
   );
+
+  // k8s_get_storage_class
+  server.tool(
+    'k8s_get_storage_class',
+    'Get full details of a specific StorageClass',
+    {
+      name: z.string().describe('StorageClass name'),
+    },
+    async ({ name }) => {
+      try {
+        const api = getStorageV1Api();
+        const res = await api.readStorageClass({ name });
+        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: formatK8sError(err) }], isError: true };
+      }
+    },
+  );
 }

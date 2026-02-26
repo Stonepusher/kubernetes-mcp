@@ -99,4 +99,48 @@ export function registerBatchTools(server: McpServer): void {
       }
     },
   );
+
+  // k8s_suspend_cronjob
+  server.tool(
+    'k8s_suspend_cronjob',
+    'Suspend a CronJob to prevent it from scheduling new Jobs',
+    {
+      name: z.string().describe('CronJob name'),
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+    },
+    async ({ name, namespace }) => {
+      try {
+        const api = getBatchV1Api();
+        await api.patchNamespacedCronJob(
+          { name, namespace, body: { spec: { suspend: true } } },
+          { headers: { 'Content-Type': 'application/merge-patch+json' } },
+        );
+        return { content: [{ type: 'text', text: `CronJob '${name}' suspended.` }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: formatK8sError(err) }], isError: true };
+      }
+    },
+  );
+
+  // k8s_resume_cronjob
+  server.tool(
+    'k8s_resume_cronjob',
+    'Resume a suspended CronJob to allow it to schedule new Jobs again',
+    {
+      name: z.string().describe('CronJob name'),
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+    },
+    async ({ name, namespace }) => {
+      try {
+        const api = getBatchV1Api();
+        await api.patchNamespacedCronJob(
+          { name, namespace, body: { spec: { suspend: false } } },
+          { headers: { 'Content-Type': 'application/merge-patch+json' } },
+        );
+        return { content: [{ type: 'text', text: `CronJob '${name}' resumed.` }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: formatK8sError(err) }], isError: true };
+      }
+    },
+  );
 }

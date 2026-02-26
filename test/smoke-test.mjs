@@ -16,7 +16,7 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SERVER_PATH = join(__dirname, '..', 'dist', 'index.js');
-const TOOL_COUNT = 68;
+const TOOL_COUNT = 73;
 const SYS_NS = 'kube-system';
 
 // ─── MCP stdio client ────────────────────────────────────────────────────────
@@ -874,6 +874,33 @@ async function main() {
 
     // ---- k8s_rollout_restart ------------------------------------------------
     skip('k8s_rollout_restart', 'write operation — skipped in smoke test');
+
+    // ---- k8s_rollout_undo ---------------------------------------------------
+    skip('k8s_rollout_undo', 'write operation — skipped in smoke test');
+
+    // ---- k8s_delete_resource ------------------------------------------------
+    skip('k8s_delete_resource', 'write operation — skipped in smoke test');
+
+    // ---- k8s_suspend_cronjob / k8s_resume_cronjob ---------------------------
+    skip('k8s_suspend_cronjob', 'write operation — skipped in smoke test');
+    skip('k8s_resume_cronjob', 'write operation — skipped in smoke test');
+
+    // ---- k8s_get_storage_class ----------------------------------------------
+    {
+      const scListRes = await call(client, 'k8s_list_storage_classes');
+      const scs = scListRes.parsed ?? [];
+      const firstSc = scs[0];
+      if (firstSc?.name) {
+        const r = await call(client, 'k8s_get_storage_class', { name: firstSc.name });
+        assert(
+          `k8s_get_storage_class — metadata.name matches (${firstSc.name})`,
+          !r.isError && r.parsed?.metadata?.name === firstSc.name,
+          r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+        );
+      } else {
+        skip('k8s_get_storage_class', 'no storage classes found');
+      }
+    }
 
   } catch (err) {
     console.error('\nFatal error during test run:', err.message);
