@@ -4,6 +4,7 @@ import * as k8s from '@kubernetes/client-node';
 import { PassThrough } from 'stream';
 import { getKubeConfig } from '../k8s-client.js';
 import { formatK8sError } from '../utils/errors.js';
+import { runCommand } from '../utils/shell.js';
 
 interface ExecResult {
   stdout: string;
@@ -100,6 +101,43 @@ export function registerExecTools(server: McpServer): void {
         return { content: [{ type: 'text', text: JSON.stringify(output, null, 2) }] };
       } catch (err) {
         return { content: [{ type: 'text', text: formatK8sError(err) }], isError: true };
+      }
+    },
+  );
+
+  // k8s_copy_file
+  server.tool(
+    'k8s_copy_file',
+    'Copy files between a pod and the local filesystem using kubectl cp',
+    {
+      direction: z
+        .enum(['from_pod', 'to_pod'])
+        .describe('"from_pod" copies a file out of the pod; "to_pod" copies a file into the pod'),
+      podName: z.string().describe('Pod name'),
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+      container: z
+        .string()
+        .optional()
+        .describe('Container name (required if the pod has multiple containers)'),
+      podPath: z.string().describe('Absolute path inside the pod'),
+      localPath: z.string().describe('Path on the local filesystem'),
+    },
+    async ({ direction, podName, namespace, container, podPath, localPath }) => {
+      try {
+        const podRef = `${namespace}/${podName}:${podPath}`;
+        const args =
+          direction === 'from_pod'
+            ? ['cp', podRef, localPath]
+            : ['cp', localPath, podRef];
+        if (container) args.push('-c', container);
+        const result = await runCommand('kubectl', args);
+        const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+        return {
+          content: [{ type: 'text', text: output || `File copied successfully.` }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: 'text', text: message }], isError: true };
       }
     },
   );

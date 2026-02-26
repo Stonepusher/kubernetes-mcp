@@ -76,6 +76,38 @@ export function registerRolloutTools(server: McpServer): void {
     },
   );
 
+  // k8s_set_image
+  server.tool(
+    'k8s_set_image',
+    'Update the container image for a Deployment, DaemonSet, or StatefulSet',
+    {
+      name: z.string().describe('Resource name'),
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+      resourceType: resourceTypeEnum,
+      container: z.string().describe('Container name to update'),
+      image: z.string().describe('New container image (e.g. nginx:1.25)'),
+    },
+    async ({ name, namespace, resourceType, container, image }) => {
+      try {
+        const result = await runCommand('kubectl', [
+          'set',
+          'image',
+          `${resourceType}/${name}`,
+          `${container}=${image}`,
+          '-n',
+          namespace,
+        ]);
+        const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+        return {
+          content: [{ type: 'text', text: output || `Image updated to '${image}' on ${resourceType}/${name}.` }],
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: 'text', text: message }], isError: true };
+      }
+    },
+  );
+
   // k8s_rollout_undo
   server.tool(
     'k8s_rollout_undo',

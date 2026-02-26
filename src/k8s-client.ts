@@ -46,3 +46,7 @@ export function getAutoscalingV2Api(): k8s.AutoscalingV2Api {
 export function getApiExtensionsV1Api(): k8s.ApiextensionsV1Api {
   return getKubeConfig().makeApiClient(k8s.ApiextensionsV1Api);
 }
+
+export function getPolicyV1Api(): k8s.PolicyV1Api {
+  return getKubeConfig().makeApiClient(k8s.PolicyV1Api);
+}

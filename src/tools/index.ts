@@ -16,6 +16,10 @@ import { registerContextTools } from './contexts.js';
 import { registerMetricsTools } from './metrics.js';
 import { registerHpaTools } from './hpa.js';
 import { registerCrdTools } from './crds.js';
+import { registerServiceAccountTools } from './serviceaccounts.js';
+import { registerNetworkPolicyTools } from './network-policies.js';
+import { registerQuotaTools } from './quotas.js';
+import { registerPdbTools } from './pdbs.js';
 
 export function registerAllTools(server: McpServer): void {
   registerKubernetesTools(server);
@@ -35,4 +39,8 @@ export function registerAllTools(server: McpServer): void {
   registerMetricsTools(server);
   registerHpaTools(server);
   registerCrdTools(server);
+  registerServiceAccountTools(server);
+  registerNetworkPolicyTools(server);
+  registerQuotaTools(server);
+  registerPdbTools(server);
 }

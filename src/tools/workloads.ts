@@ -95,4 +95,54 @@ export function registerWorkloadTools(server: McpServer): void {
       }
     },
   );
+
+  // k8s_list_replicasets
+  server.tool(
+    'k8s_list_replicasets',
+    'List ReplicaSets in a namespace (useful for inspecting deployment rollout history)',
+    {
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+      labelSelector: z.string().optional().describe('Label selector filter (e.g. app=nginx)'),
+    },
+    async ({ namespace, labelSelector }) => {
+      try {
+        const api = getAppsV1Api();
+        const res = await api.listNamespacedReplicaSet({ namespace, labelSelector });
+        const replicasets = res.items.map((rs) => ({
+          name: rs.metadata?.name,
+          namespace: rs.metadata?.namespace,
+          replicas: rs.spec?.replicas,
+          readyReplicas: rs.status?.readyReplicas ?? 0,
+          availableReplicas: rs.status?.availableReplicas ?? 0,
+          ownerReferences: rs.metadata?.ownerReferences?.map((o) => ({
+            kind: o.kind,
+            name: o.name,
+          })),
+          createdAt: rs.metadata?.creationTimestamp,
+        }));
+        return { content: [{ type: 'text', text: JSON.stringify(replicasets, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: formatK8sError(err) }], isError: true };
+      }
+    },
+  );
+
+  // k8s_get_replicaset
+  server.tool(
+    'k8s_get_replicaset',
+    'Get full details of a specific ReplicaSet',
+    {
+      name: z.string().describe('ReplicaSet name'),
+      namespace: z.string().default('default').describe('Kubernetes namespace'),
+    },
+    async ({ name, namespace }) => {
+      try {
+        const api = getAppsV1Api();
+        const res = await api.readNamespacedReplicaSet({ name, namespace });
+        return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
+      } catch (err) {
+        return { content: [{ type: 'text', text: formatK8sError(err) }], isError: true };
+      }
+    },
+  );
 }

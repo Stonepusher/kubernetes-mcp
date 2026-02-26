@@ -102,6 +102,61 @@ export function registerNodeTools(server: McpServer): void {
     },
   );
 
+  // k8s_label_node
+  server.tool(
+    'k8s_label_node',
+    'Add, update, or remove labels on a node. Use "key=value" to set and "key-" to remove.',
+    {
+      name: z.string().describe('Node name'),
+      labels: z
+        .array(z.string())
+        .min(1)
+        .describe('Label operations, e.g. ["env=prod", "tier=frontend"] or ["env-"] to remove'),
+      overwrite: z
+        .boolean()
+        .default(false)
+        .describe('Allow overwriting existing label values (default: false)'),
+    },
+    async ({ name, labels, overwrite }) => {
+      try {
+        const args = ['label', 'node', name, ...labels];
+        if (overwrite) args.push('--overwrite');
+        const result = await runCommand('kubectl', args);
+        const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+        return { content: [{ type: 'text', text: output || `Node '${name}' labels updated.` }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: 'text', text: message }], isError: true };
+      }
+    },
+  );
+
+  // k8s_taint_node
+  server.tool(
+    'k8s_taint_node',
+    'Add or remove taints on a node. Use "key=value:Effect" to add and "key:Effect-" to remove.',
+    {
+      name: z.string().describe('Node name'),
+      taints: z
+        .array(z.string())
+        .min(1)
+        .describe(
+          'Taint operations, e.g. ["dedicated=gpu:NoSchedule"] or ["dedicated:NoSchedule-"] to remove',
+        ),
+    },
+    async ({ name, taints }) => {
+      try {
+        const args = ['taint', 'node', name, ...taints];
+        const result = await runCommand('kubectl', args);
+        const output = [result.stdout, result.stderr].filter(Boolean).join('\n');
+        return { content: [{ type: 'text', text: output || `Node '${name}' taints updated.` }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return { content: [{ type: 'text', text: message }], isError: true };
+      }
+    },
+  );
+
   // k8s_drain_node
   server.tool(
     'k8s_drain_node',

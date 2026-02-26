@@ -16,7 +16,7 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SERVER_PATH = join(__dirname, '..', 'dist', 'index.js');
-const TOOL_COUNT = 73;
+const TOOL_COUNT = 89;
 const SYS_NS = 'kube-system';
 
 // ─── MCP stdio client ────────────────────────────────────────────────────────
@@ -871,6 +871,156 @@ async function main() {
     } else {
       skip('k8s_get_crd', 'no CRDs found');
     }
+
+    // ---- k8s_list_service_accounts ------------------------------------------
+    const saRes = await call(client, 'k8s_list_service_accounts', { namespace: SYS_NS });
+    const serviceAccounts = saRes.parsed ?? [];
+    assert(
+      `k8s_list_service_accounts — returns non-empty array in ${SYS_NS}`,
+      !saRes.isError && Array.isArray(serviceAccounts) && serviceAccounts.length > 0,
+      saRes.isError ? saRes.text.slice(0, 120) : `count=${serviceAccounts.length}`,
+    );
+
+    const firstSa = serviceAccounts[0];
+
+    // ---- k8s_get_service_account --------------------------------------------
+    if (firstSa?.name) {
+      const r = await call(client, 'k8s_get_service_account', { name: firstSa.name, namespace: SYS_NS });
+      assert(
+        `k8s_get_service_account — metadata.name matches (${firstSa.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstSa.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_service_account', `no service accounts in ${SYS_NS}`);
+    }
+
+    // ---- k8s_list_network_policies ------------------------------------------
+    const npRes = await call(client, 'k8s_list_network_policies', { namespace: 'default' });
+    const networkPolicies = npRes.parsed ?? [];
+    assert(
+      'k8s_list_network_policies — returns array for default (may be empty)',
+      !npRes.isError && Array.isArray(networkPolicies),
+      npRes.isError ? npRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstNp = networkPolicies[0];
+
+    // ---- k8s_get_network_policy ---------------------------------------------
+    if (firstNp?.name) {
+      const r = await call(client, 'k8s_get_network_policy', { name: firstNp.name, namespace: 'default' });
+      assert(
+        `k8s_get_network_policy — metadata.name matches (${firstNp.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstNp.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_network_policy', 'no network policies in default namespace');
+    }
+
+    // ---- k8s_list_replicasets -----------------------------------------------
+    const rsRes = await call(client, 'k8s_list_replicasets', { namespace: SYS_NS });
+    const replicasets = rsRes.parsed ?? [];
+    assert(
+      `k8s_list_replicasets — returns array for ${SYS_NS}`,
+      !rsRes.isError && Array.isArray(replicasets),
+      rsRes.isError ? rsRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstRs = replicasets[0];
+
+    // ---- k8s_get_replicaset -------------------------------------------------
+    if (firstRs?.name) {
+      const r = await call(client, 'k8s_get_replicaset', { name: firstRs.name, namespace: SYS_NS });
+      assert(
+        `k8s_get_replicaset — metadata.name matches (${firstRs.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstRs.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_replicaset', `no replicasets in ${SYS_NS}`);
+    }
+
+    // ---- k8s_list_resource_quotas -------------------------------------------
+    const rqRes = await call(client, 'k8s_list_resource_quotas', { namespace: 'default' });
+    const resourceQuotas = rqRes.parsed ?? [];
+    assert(
+      'k8s_list_resource_quotas — returns array for default (may be empty)',
+      !rqRes.isError && Array.isArray(resourceQuotas),
+      rqRes.isError ? rqRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstRq = resourceQuotas[0];
+
+    // ---- k8s_get_resource_quota ---------------------------------------------
+    if (firstRq?.name) {
+      const r = await call(client, 'k8s_get_resource_quota', { name: firstRq.name, namespace: 'default' });
+      assert(
+        `k8s_get_resource_quota — metadata.name matches (${firstRq.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstRq.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_resource_quota', 'no resource quotas in default namespace');
+    }
+
+    // ---- k8s_list_limit_ranges ----------------------------------------------
+    const lrRes = await call(client, 'k8s_list_limit_ranges', { namespace: 'default' });
+    const limitRanges = lrRes.parsed ?? [];
+    assert(
+      'k8s_list_limit_ranges — returns array for default (may be empty)',
+      !lrRes.isError && Array.isArray(limitRanges),
+      lrRes.isError ? lrRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstLr = limitRanges[0];
+
+    // ---- k8s_get_limit_range ------------------------------------------------
+    if (firstLr?.name) {
+      const r = await call(client, 'k8s_get_limit_range', { name: firstLr.name, namespace: 'default' });
+      assert(
+        `k8s_get_limit_range — metadata.name matches (${firstLr.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstLr.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_limit_range', 'no limit ranges in default namespace');
+    }
+
+    // ---- k8s_list_pod_disruption_budgets ------------------------------------
+    const pdbRes = await call(client, 'k8s_list_pod_disruption_budgets', { namespace: 'default' });
+    const pdbs = pdbRes.parsed ?? [];
+    assert(
+      'k8s_list_pod_disruption_budgets — returns array for default (may be empty)',
+      !pdbRes.isError && Array.isArray(pdbs),
+      pdbRes.isError ? pdbRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstPdb = pdbs[0];
+
+    // ---- k8s_get_pod_disruption_budget --------------------------------------
+    if (firstPdb?.name) {
+      const r = await call(client, 'k8s_get_pod_disruption_budget', { name: firstPdb.name, namespace: 'default' });
+      assert(
+        `k8s_get_pod_disruption_budget — metadata.name matches (${firstPdb.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstPdb.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_pod_disruption_budget', 'no PDBs in default namespace');
+    }
+
+    // ---- k8s_set_image ------------------------------------------------------
+    skip('k8s_set_image', 'write operation — skipped in smoke test');
+
+    // ---- k8s_label_node -----------------------------------------------------
+    skip('k8s_label_node', 'write operation — skipped in smoke test');
+
+    // ---- k8s_taint_node -----------------------------------------------------
+    skip('k8s_taint_node', 'write operation — skipped in smoke test');
+
+    // ---- k8s_copy_file ------------------------------------------------------
+    skip('k8s_copy_file', 'write/side-effect operation — skipped in smoke test');
 
     // ---- k8s_rollout_restart ------------------------------------------------
     skip('k8s_rollout_restart', 'write operation — skipped in smoke test');
