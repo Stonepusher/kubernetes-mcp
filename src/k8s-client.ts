@@ -18,3 +18,11 @@ export function getCoreV1Api(): k8s.CoreV1Api {
 export function getAppsV1Api(): k8s.AppsV1Api {
   return getKubeConfig().makeApiClient(k8s.AppsV1Api);
 }
+
+export function getNetworkingV1Api(): k8s.NetworkingV1Api {
+  return getKubeConfig().makeApiClient(k8s.NetworkingV1Api);
+}
+
+export function getStorageV1Api(): k8s.StorageV1Api {
+  return getKubeConfig().makeApiClient(k8s.StorageV1Api);
+}

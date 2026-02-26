@@ -16,7 +16,7 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SERVER_PATH = join(__dirname, '..', 'dist', 'index.js');
-const TOOL_COUNT = 30;
+const TOOL_COUNT = 46;
 const SYS_NS = 'kube-system';
 
 // ─── MCP stdio client ────────────────────────────────────────────────────────
@@ -475,6 +475,153 @@ async function main() {
           r.text.slice(0, 120),
         );
       }
+    }
+
+    // ---- k8s_list_nodes -----------------------------------------------------
+    const nodesRes = await call(client, 'k8s_list_nodes');
+    const nodes = nodesRes.parsed ?? [];
+    assert(
+      'k8s_list_nodes — returns non-empty array',
+      !nodesRes.isError && Array.isArray(nodes) && nodes.length > 0,
+      nodesRes.isError ? nodesRes.text.slice(0, 120) : `count=${nodes.length}`,
+    );
+
+    const firstNode = nodes[0];
+
+    // ---- k8s_get_node -------------------------------------------------------
+    if (firstNode?.name) {
+      const r = await call(client, 'k8s_get_node', { name: firstNode.name });
+      assert(
+        `k8s_get_node — metadata.name matches (${firstNode.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstNode.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_node', 'no nodes found');
+    }
+
+    // ---- k8s_list_daemonsets ------------------------------------------------
+    const dsRes = await call(client, 'k8s_list_daemonsets', { namespace: SYS_NS });
+    const daemonsets = dsRes.parsed ?? [];
+    assert(
+      `k8s_list_daemonsets — returns array for ${SYS_NS}`,
+      !dsRes.isError && Array.isArray(daemonsets),
+      dsRes.isError ? dsRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstDs = daemonsets[0];
+
+    // ---- k8s_get_daemonset --------------------------------------------------
+    if (firstDs?.name) {
+      const r = await call(client, 'k8s_get_daemonset', { name: firstDs.name, namespace: SYS_NS });
+      assert(
+        `k8s_get_daemonset — metadata.name matches (${firstDs.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstDs.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_daemonset', `no daemonsets in ${SYS_NS}`);
+    }
+
+    // ---- k8s_list_statefulsets ----------------------------------------------
+    const ssRes = await call(client, 'k8s_list_statefulsets', { namespace: SYS_NS });
+    const statefulsets = ssRes.parsed ?? [];
+    assert(
+      `k8s_list_statefulsets — returns array for ${SYS_NS}`,
+      !ssRes.isError && Array.isArray(statefulsets),
+      ssRes.isError ? ssRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstSs = statefulsets[0];
+
+    // ---- k8s_get_statefulset ------------------------------------------------
+    if (firstSs?.name) {
+      const r = await call(client, 'k8s_get_statefulset', { name: firstSs.name, namespace: SYS_NS });
+      assert(
+        `k8s_get_statefulset — metadata.name matches (${firstSs.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstSs.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_statefulset', `no statefulsets in ${SYS_NS}`);
+    }
+
+    // ---- k8s_list_persistent_volumes ----------------------------------------
+    const pvsRes = await call(client, 'k8s_list_persistent_volumes');
+    const pvs = pvsRes.parsed ?? [];
+    assert(
+      'k8s_list_persistent_volumes — returns array',
+      !pvsRes.isError && Array.isArray(pvs),
+      pvsRes.isError ? pvsRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstPv = pvs[0];
+
+    // ---- k8s_get_persistent_volume ------------------------------------------
+    if (firstPv?.name) {
+      const r = await call(client, 'k8s_get_persistent_volume', { name: firstPv.name });
+      assert(
+        `k8s_get_persistent_volume — metadata.name matches (${firstPv.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstPv.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_persistent_volume', 'no PersistentVolumes found');
+    }
+
+    // ---- k8s_list_persistent_volume_claims ----------------------------------
+    const pvcsRes = await call(client, 'k8s_list_persistent_volume_claims', { namespace: 'default' });
+    const pvcs = pvcsRes.parsed ?? [];
+    assert(
+      'k8s_list_persistent_volume_claims — returns array for default',
+      !pvcsRes.isError && Array.isArray(pvcs),
+      pvcsRes.isError ? pvcsRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstPvc = pvcs[0];
+
+    // ---- k8s_get_persistent_volume_claim ------------------------------------
+    if (firstPvc?.name) {
+      const r = await call(client, 'k8s_get_persistent_volume_claim', { name: firstPvc.name, namespace: 'default' });
+      assert(
+        `k8s_get_persistent_volume_claim — metadata.name matches (${firstPvc.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstPvc.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_persistent_volume_claim', 'no PVCs in default namespace');
+    }
+
+    // ---- k8s_list_storage_classes -------------------------------------------
+    const scRes = await call(client, 'k8s_list_storage_classes');
+    const storageClasses = scRes.parsed ?? [];
+    assert(
+      'k8s_list_storage_classes — returns array',
+      !scRes.isError && Array.isArray(storageClasses),
+      scRes.isError ? scRes.text.slice(0, 120) : 'not an array',
+    );
+
+    // ---- k8s_list_ingresses -------------------------------------------------
+    const ingRes = await call(client, 'k8s_list_ingresses', { namespace: 'default' });
+    const ingresses = ingRes.parsed ?? [];
+    assert(
+      'k8s_list_ingresses — returns array for default (may be empty)',
+      !ingRes.isError && Array.isArray(ingresses),
+      ingRes.isError ? ingRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstIng = ingresses[0];
+
+    // ---- k8s_get_ingress ----------------------------------------------------
+    if (firstIng?.name) {
+      const r = await call(client, 'k8s_get_ingress', { name: firstIng.name, namespace: 'default' });
+      assert(
+        `k8s_get_ingress — metadata.name matches (${firstIng.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstIng.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_ingress', 'no ingresses in default namespace');
     }
 
   } catch (err) {
