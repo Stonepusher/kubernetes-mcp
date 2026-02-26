@@ -16,7 +16,7 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SERVER_PATH = join(__dirname, '..', 'dist', 'index.js');
-const TOOL_COUNT = 46;
+const TOOL_COUNT = 68;
 const SYS_NS = 'kube-system';
 
 // ─── MCP stdio client ────────────────────────────────────────────────────────
@@ -623,6 +623,257 @@ async function main() {
     } else {
       skip('k8s_get_ingress', 'no ingresses in default namespace');
     }
+
+    // ---- k8s_list_jobs ------------------------------------------------------
+    const jobsRes = await call(client, 'k8s_list_jobs', { namespace: 'default' });
+    const jobs = jobsRes.parsed ?? [];
+    assert(
+      'k8s_list_jobs — returns array for default (may be empty)',
+      !jobsRes.isError && Array.isArray(jobs),
+      jobsRes.isError ? jobsRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstJob = jobs[0];
+
+    // ---- k8s_get_job --------------------------------------------------------
+    if (firstJob?.name) {
+      const r = await call(client, 'k8s_get_job', { name: firstJob.name, namespace: 'default' });
+      assert(
+        `k8s_get_job — metadata.name matches (${firstJob.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstJob.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_job', 'no jobs in default namespace');
+    }
+
+    // ---- k8s_list_cronjobs --------------------------------------------------
+    const cjRes = await call(client, 'k8s_list_cronjobs', { namespace: 'default' });
+    const cronjobs = cjRes.parsed ?? [];
+    assert(
+      'k8s_list_cronjobs — returns array for default (may be empty)',
+      !cjRes.isError && Array.isArray(cronjobs),
+      cjRes.isError ? cjRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstCj = cronjobs[0];
+
+    // ---- k8s_get_cronjob ----------------------------------------------------
+    if (firstCj?.name) {
+      const r = await call(client, 'k8s_get_cronjob', { name: firstCj.name, namespace: 'default' });
+      assert(
+        `k8s_get_cronjob — metadata.name matches (${firstCj.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstCj.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_cronjob', 'no cronjobs in default namespace');
+    }
+
+    // ---- k8s_rollout_status -------------------------------------------------
+    {
+      const r = await call(
+        client,
+        'k8s_rollout_status',
+        { name: 'cilium-operator', namespace: SYS_NS, resourceType: 'deployment', timeoutSeconds: 10 },
+        20_000,
+      );
+      if (r.isError) {
+        skip('k8s_rollout_status', `error (deployment may not exist): ${r.text.slice(0, 80)}`);
+      } else {
+        assert(
+          'k8s_rollout_status — returns text output',
+          r.text.length > 0,
+          'empty response',
+        );
+      }
+    }
+
+    // ---- k8s_list_cluster_roles ---------------------------------------------
+    const crRes = await call(client, 'k8s_list_cluster_roles');
+    const clusterRoles = crRes.parsed ?? [];
+    assert(
+      'k8s_list_cluster_roles — returns non-empty array',
+      !crRes.isError && Array.isArray(clusterRoles) && clusterRoles.length > 0,
+      crRes.isError ? crRes.text.slice(0, 120) : `count=${clusterRoles.length}`,
+    );
+
+    const firstCr = clusterRoles[0];
+
+    // ---- k8s_get_cluster_role -----------------------------------------------
+    if (firstCr?.name) {
+      const r = await call(client, 'k8s_get_cluster_role', { name: firstCr.name });
+      assert(
+        `k8s_get_cluster_role — metadata.name matches (${firstCr.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstCr.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_cluster_role', 'no cluster roles found');
+    }
+
+    // ---- k8s_list_cluster_role_bindings -------------------------------------
+    const crbRes = await call(client, 'k8s_list_cluster_role_bindings');
+    const clusterRoleBindings = crbRes.parsed ?? [];
+    assert(
+      'k8s_list_cluster_role_bindings — returns non-empty array',
+      !crbRes.isError && Array.isArray(clusterRoleBindings) && clusterRoleBindings.length > 0,
+      crbRes.isError ? crbRes.text.slice(0, 120) : `count=${clusterRoleBindings.length}`,
+    );
+
+    const firstCrb = clusterRoleBindings[0];
+
+    // ---- k8s_get_cluster_role_binding ---------------------------------------
+    if (firstCrb?.name) {
+      const r = await call(client, 'k8s_get_cluster_role_binding', { name: firstCrb.name });
+      assert(
+        `k8s_get_cluster_role_binding — metadata.name matches (${firstCrb.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstCrb.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_cluster_role_binding', 'no cluster role bindings found');
+    }
+
+    // ---- k8s_list_roles -----------------------------------------------------
+    const rolesRes = await call(client, 'k8s_list_roles', { namespace: SYS_NS });
+    const roles = rolesRes.parsed ?? [];
+    assert(
+      `k8s_list_roles — returns array for ${SYS_NS}`,
+      !rolesRes.isError && Array.isArray(roles),
+      rolesRes.isError ? rolesRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstRole = roles[0];
+
+    // ---- k8s_get_role -------------------------------------------------------
+    if (firstRole?.name) {
+      const r = await call(client, 'k8s_get_role', { name: firstRole.name, namespace: SYS_NS });
+      assert(
+        `k8s_get_role — metadata.name matches (${firstRole.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstRole.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_role', `no roles in ${SYS_NS}`);
+    }
+
+    // ---- k8s_list_role_bindings ---------------------------------------------
+    const rbRes = await call(client, 'k8s_list_role_bindings', { namespace: SYS_NS });
+    const roleBindings = rbRes.parsed ?? [];
+    assert(
+      `k8s_list_role_bindings — returns array for ${SYS_NS}`,
+      !rbRes.isError && Array.isArray(roleBindings),
+      rbRes.isError ? rbRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstRb = roleBindings[0];
+
+    // ---- k8s_get_role_binding -----------------------------------------------
+    if (firstRb?.name) {
+      const r = await call(client, 'k8s_get_role_binding', { name: firstRb.name, namespace: SYS_NS });
+      assert(
+        `k8s_get_role_binding — metadata.name matches (${firstRb.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstRb.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_role_binding', `no role bindings in ${SYS_NS}`);
+    }
+
+    // ---- k8s_list_contexts --------------------------------------------------
+    const ctxRes = await call(client, 'k8s_list_contexts');
+    const contexts = ctxRes.parsed ?? [];
+    assert(
+      'k8s_list_contexts — returns non-empty array',
+      !ctxRes.isError && Array.isArray(contexts) && contexts.length > 0,
+      ctxRes.isError ? ctxRes.text.slice(0, 120) : `count=${contexts.length}`,
+    );
+    assert(
+      'k8s_list_contexts — at least one context has isCurrent=true',
+      Array.isArray(contexts) && contexts.some((c) => c.isCurrent === true),
+      'no current context found',
+    );
+
+    // ---- k8s_use_context ----------------------------------------------------
+    skip('k8s_use_context', 'write operation — skipped in smoke test');
+
+    // ---- k8s_top_nodes ------------------------------------------------------
+    {
+      const r = await call(client, 'k8s_top_nodes', {}, 20_000);
+      if (r.isError && /metrics/i.test(r.text)) {
+        skip('k8s_top_nodes', `metrics-server not available: ${r.text.slice(0, 80)}`);
+      } else {
+        assert(
+          'k8s_top_nodes — returns array',
+          !r.isError && Array.isArray(r.parsed),
+          r.isError ? r.text.slice(0, 120) : `got: ${typeof r.parsed}`,
+        );
+      }
+    }
+
+    // ---- k8s_top_pods -------------------------------------------------------
+    {
+      const r = await call(client, 'k8s_top_pods', { namespace: SYS_NS }, 20_000);
+      if (r.isError && /metrics/i.test(r.text)) {
+        skip('k8s_top_pods', `metrics-server not available: ${r.text.slice(0, 80)}`);
+      } else {
+        assert(
+          `k8s_top_pods — returns array for ${SYS_NS}`,
+          !r.isError && Array.isArray(r.parsed),
+          r.isError ? r.text.slice(0, 120) : `got: ${typeof r.parsed}`,
+        );
+      }
+    }
+
+    // ---- k8s_list_hpas ------------------------------------------------------
+    const hpaRes = await call(client, 'k8s_list_hpas', { namespace: 'default' });
+    const hpas = hpaRes.parsed ?? [];
+    assert(
+      'k8s_list_hpas — returns array for default (may be empty)',
+      !hpaRes.isError && Array.isArray(hpas),
+      hpaRes.isError ? hpaRes.text.slice(0, 120) : 'not an array',
+    );
+
+    const firstHpa = hpas[0];
+
+    // ---- k8s_get_hpa --------------------------------------------------------
+    if (firstHpa?.name) {
+      const r = await call(client, 'k8s_get_hpa', { name: firstHpa.name, namespace: 'default' });
+      assert(
+        `k8s_get_hpa — metadata.name matches (${firstHpa.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstHpa.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_hpa', 'no HPAs in default namespace');
+    }
+
+    // ---- k8s_list_crds ------------------------------------------------------
+    const crdRes = await call(client, 'k8s_list_crds');
+    const crds = crdRes.parsed ?? [];
+    assert(
+      'k8s_list_crds — returns non-empty array',
+      !crdRes.isError && Array.isArray(crds) && crds.length > 0,
+      crdRes.isError ? crdRes.text.slice(0, 120) : `count=${crds.length}`,
+    );
+
+    const firstCrd = crds[0];
+
+    // ---- k8s_get_crd --------------------------------------------------------
+    if (firstCrd?.name) {
+      const r = await call(client, 'k8s_get_crd', { name: firstCrd.name });
+      assert(
+        `k8s_get_crd — metadata.name matches (${firstCrd.name})`,
+        !r.isError && r.parsed?.metadata?.name === firstCrd.name,
+        r.isError ? r.text.slice(0, 120) : `got name: ${r.parsed?.metadata?.name}`,
+      );
+    } else {
+      skip('k8s_get_crd', 'no CRDs found');
+    }
+
+    // ---- k8s_rollout_restart ------------------------------------------------
+    skip('k8s_rollout_restart', 'write operation — skipped in smoke test');
 
   } catch (err) {
     console.error('\nFatal error during test run:', err.message);
